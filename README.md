@@ -1,9 +1,5 @@
 
-  <title>Warenausgang Polfood GmbH</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <style>
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
