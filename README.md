@@ -125,10 +125,6 @@
       font-size: 12px;
     }
 
-    .photo-btn {
-      background: #1565c0;
-    }
-
     .summary-box {
       margin-top: 20px;
       background: #fafafa;
@@ -179,48 +175,7 @@
       font-size: 12px;
       color: #555;
       margin-top: 4px;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 3000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      align-items: center;
-      justify-content: center;
-      padding: 15px;
-      box-sizing: border-box;
-    }
-
-    .modal-content {
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
-      max-width: 95%;
-      max-height: 95%;
-      overflow: auto;
-      text-align: center;
-    }
-
-    .modal-content img {
-      max-width: 100%;
-      max-height: 80vh;
-      border-radius: 8px;
-    }
-
-    .close-modal {
-      margin-top: 10px;
-      background: black;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: auto;
+      white-space: pre-line;
     }
 
     @media (max-width: 600px) {
@@ -269,7 +224,7 @@
 
   <div class="photo-preview" id="photoPreviewBox" style="display:none;">
     <img id="photoPreview" src="" alt="Vorschau">
-    <div class="photo-info">Foto wird mit dem Eintrag gespeichert</div>
+    <div class="photo-info" id="photoInfo">Foto wird als separate Datei gespeichert</div>
   </div>
 
   <button type="button" onclick="addEntry()">➕ Eintrag speichern</button>
@@ -296,20 +251,12 @@
         <th>H1 OUT</th>
         <th>Einweg OUT</th>
         <th>EPAL OUT</th>
-        <th>Foto</th>
+        <th>Foto-Datei</th>
         <th>Aktion</th>
       </tr>
     </thead>
     <tbody id="table"></tbody>
   </table>
-</div>
-
-<div class="modal" id="photoModal">
-  <div class="modal-content">
-    <img id="modalImage" src="" alt="Foto">
-    <br>
-    <button class="close-modal" onclick="closePhoto()">Schließen</button>
-  </div>
 </div>
 
 <script>
@@ -376,7 +323,7 @@
 
   let data = JSON.parse(localStorage.getItem("warenausgang_data") || "[]");
   let kunden = JSON.parse(localStorage.getItem("kunden_liste") || "null") || [...standardKunden];
-  let currentPhotoBase64 = "";
+  let currentPhotoFile = null;
 
   const kundeInput = document.getElementById("kunde");
   const kundenList = document.getElementById("kundenList");
@@ -384,6 +331,7 @@
   const fotoInput = document.getElementById("foto");
   const photoPreview = document.getElementById("photoPreview");
   const photoPreviewBox = document.getElementById("photoPreviewBox");
+  const photoInfo = document.getElementById("photoInfo");
 
   if (!datumInput.value) {
     datumInput.value = new Date().toISOString().split("T")[0];
@@ -445,6 +393,50 @@
     }
   }
 
+  function sanitizeFileName(name) {
+    return name
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function getFileExtension(file) {
+    if (!file) return "jpg";
+
+    const nameParts = file.name.split(".");
+    if (nameParts.length > 1) {
+      return nameParts.pop().toLowerCase();
+    }
+
+    if (file.type === "image/png") return "png";
+    if (file.type === "image/webp") return "webp";
+    if (file.type === "image/heic") return "heic";
+    return "jpg";
+  }
+
+  function buildPhotoFileName(datum, kunde, file) {
+    const cleanDate = sanitizeFileName(datum);
+    const cleanKunde = sanitizeFileName(kunde.replace(/\n/g, " "));
+    const ext = getFileExtension(file);
+    return `${cleanDate} - ${cleanKunde}.${ext}`;
+  }
+
+  function downloadPhotoFile(file, fileName) {
+    if (!file) return;
+
+    const blobUrl = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 1000);
+  }
+
   kundeInput.addEventListener("input", () => {
     renderKunden(kundeInput.value);
   });
@@ -477,16 +469,24 @@
   function handlePhotoSelect(event) {
     const file = event.target.files[0];
     if (!file) {
-      currentPhotoBase64 = "";
+      currentPhotoFile = null;
       photoPreviewBox.style.display = "none";
+      photoPreview.src = "";
+      photoInfo.textContent = "Foto wird als separate Datei gespeichert";
       return;
     }
 
+    currentPhotoFile = file;
+
     const reader = new FileReader();
     reader.onload = function(e) {
-      currentPhotoBase64 = e.target.result;
-      photoPreview.src = currentPhotoBase64;
+      photoPreview.src = e.target.result;
       photoPreviewBox.style.display = "block";
+
+      const datum = document.getElementById("datum").value || "Datum";
+      const kunde = document.getElementById("kunde").value.trim() || "Kunde";
+      const previewName = buildPhotoFileName(datum, kunde, file);
+      photoInfo.textContent = `Dateiname beim Speichern:\n${previewName}`;
     };
     reader.readAsDataURL(file);
   }
@@ -507,6 +507,13 @@
 
     addKunde(kunde);
 
+    let fotoDateiName = "";
+
+    if (currentPhotoFile) {
+      fotoDateiName = buildPhotoFileName(datum, kunde, currentPhotoFile);
+      downloadPhotoFile(currentPhotoFile, fotoDateiName);
+    }
+
     data.push({
       datum: datum,
       kunde: kunde,
@@ -514,7 +521,7 @@
       h1_out: Number(document.getElementById("h1_out").value || 0),
       einweg_out: Number(document.getElementById("einweg_out").value || 0),
       epal_out: Number(document.getElementById("epal_out").value || 0),
-      foto: currentPhotoBase64 || ""
+      fotoDateiName: fotoDateiName
     });
 
     save();
@@ -526,9 +533,11 @@
     document.getElementById("einweg_out").value = "";
     document.getElementById("epal_out").value = "";
     document.getElementById("foto").value = "";
-    currentPhotoBase64 = "";
+
+    currentPhotoFile = null;
     photoPreview.src = "";
     photoPreviewBox.style.display = "none";
+    photoInfo.textContent = "Foto wird als separate Datei gespeichert";
 
     document.getElementById("e2_out").focus();
   }
@@ -540,16 +549,6 @@
       render();
       renderSummen();
     }
-  }
-
-  function openPhoto(src) {
-    document.getElementById("modalImage").src = src;
-    document.getElementById("photoModal").style.display = "flex";
-  }
-
-  function closePhoto() {
-    document.getElementById("photoModal").style.display = "none";
-    document.getElementById("modalImage").src = "";
   }
 
   function render() {
@@ -572,12 +571,8 @@
           <td>${r.h1_out}</td>
           <td>${r.einweg_out}</td>
           <td>${r.epal_out}</td>
-          <td>
-            ${r.foto ? `<button type="button" class="action-btn photo-btn" onclick="openPhoto(${JSON.stringify(r.foto)})">Foto ansehen</button>` : `Kein Foto`}
-          </td>
-          <td>
-            <button type="button" class="action-btn" onclick="deleteEntry(${originalIndex})">Löschen</button>
-          </td>
+          <td>${r.fotoDateiName || "Kein Foto"}</td>
+          <td><button type="button" class="action-btn" onclick="deleteEntry(${originalIndex})">Löschen</button></td>
         </tr>
       `;
     });
@@ -616,15 +611,14 @@
       return;
     }
 
-    const exportData = filteredData.map((r, index) => ({
+    const exportData = filteredData.map(r => ({
       Datum: r.datum,
       Kunde: r.kunde.replace(/\n/g, " "),
       "E2 OUT": r.e2_out,
       "H1 OUT": r.h1_out,
       "Einweg OUT": r.einweg_out,
       "EPAL OUT": r.epal_out,
-      "Foto vorhanden": r.foto ? "Ja" : "Nein",
-      "Foto-Nr": r.foto ? index + 1 : ""
+      "Foto-Datei": r.fotoDateiName || ""
     }));
 
     const summen = filteredData.reduce((acc, r) => {
@@ -647,8 +641,7 @@
       "H1 OUT": summen["H1 OUT"],
       "Einweg OUT": summen["Einweg OUT"],
       "EPAL OUT": summen["EPAL OUT"],
-      "Foto vorhanden": "",
-      "Foto-Nr": ""
+      "Foto-Datei": ""
     });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
