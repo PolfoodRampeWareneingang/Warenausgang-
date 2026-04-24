@@ -165,7 +165,7 @@ th { background:#eee; }
 // ===== STANDARD KUNDEN =====
 const standardKunden = [
 "1 / Wach","2 / Fed","3 / Willi Hof","4 / Bremen EB","5 / Bremerhaven",
-"6 / Bad Oldesloe EB","8 / Havelland 618338","9 / Schmidt und Sohn",
+"6 / Bad Oldesloe","8 / Havelland ","9 / Schmidt",
 "10 / GT","11 / Dres","12 / Atl","13 / Freiburg","14 / Freiburg 2",
 "18 / Föl","29 / Rostock","30 / Peter","32 / BAR","33 / Frisch",
 "45 / Wolf Annaberg","48 / Tor","51 / Käfer","52 / Hamb",
@@ -295,6 +295,9 @@ document.querySelectorAll("input").forEach(i=>i.value="");
 currentPhoto=null;
 document.getElementById("previewBox").style.display="none";
 setHeute();
+
+// 👉 NEU: Fokus zurück zu Kunde
+kundeInput.focus();
 }
 
 // ===== RENDER =====
