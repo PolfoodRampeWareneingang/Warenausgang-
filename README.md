@@ -62,7 +62,6 @@ th { background:#eee; }
 .dropdown-item {
   padding:12px;
   cursor:pointer;
-  white-space:pre-line;
 }
 
 .dropdown-item:hover { background:#eee; }
@@ -112,16 +111,16 @@ th { background:#eee; }
 </div>
 
 <label>E2 OUT</label>
-<input type="number" id="e2_out">
+<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" id="e2_out">
 
 <label>H1 OUT</label>
-<input type="number" id="h1_out">
+<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" id="h1_out">
 
 <label>Einweg OUT</label>
-<input type="number" id="einweg_out">
+<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" id="einweg_out">
 
 <label>EPAL OUT</label>
-<input type="number" id="epal_out">
+<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" id="epal_out">
 
 <label>Foto</label>
 <input type="file" id="foto" accept="image/*" capture="environment">
@@ -162,23 +161,23 @@ th { background:#eee; }
 
 <script>
 
-// ===== STANDARD KUNDEN =====
+// ===== KUNDEN =====
 const standardKunden = [
 "1 / Wach","2 / Fed","3 / Willi Hof","4 / Bremen EB","5 / Bremerhaven",
-"6 / Bad Oldesloe","8 / Havelland ","9 / Schmidt",
-"10 / GT","11 / Dres","12 / Atl","13 / Freiburg","14 / Freiburg 2",
+"6 / Bad Oldesloe EB","8 / Havelland","9 / Schmidt","10 / GT",
+"11 / Dres","12 / Atl","13 / Freiburg","14 / Freiburg 2",
 "18 / Föl","29 / Rostock","30 / Peter","32 / BAR","33 / Frisch",
-"45 / Wolf Annaberg","48 / Tor","51 / Käfer","52 / Hamb",
+"45 / Wolf","48 / Tor","51 / Käfer","52 / Hamb",
 "53 / Ham Riem","54 / Ham Berlin","55 / Ham Frankfurt","56 / Fisch",
 "57 / Wolf + Kunt","58 / FMS","59 / DUSP","66 / Mehl","70 / FEK",
-"74 / Landpute","76 / Wunder","77 / Elst","80 / Mär","81 / Mig",
-"82 / Wal","83 / Dim","84 / Landau","85 / Sandmann","87 / Richt",
-"88 / See","89 / Zimmer","90 / MEGEM","91 / Bingen","92 / Weisen",
-"93 / Enders","94 / Rot","95 / TLC","96 / NK","97 / Atl 2",
-"98 / BLF","99 / Chickeria","Unna","Yu An","Futterhappen","Tosbiks","100 / Konrad"
+"74 / Landpute","76 / Wunder","77 / Elst","80 / Mär",
+"81 / Mig","82 / Wal","83 / Dim","84 / Landau","85 / Sandmann",
+"87 / Richt","88 / See","89 / Zimmer","90 / MEGEM",
+"91 / Bingen","92 / Weisen","93 / Enders","94 / Rot",
+"95 / TLC","96 / NK","97 / Atl 2","98 / BLF",
+"99 / Chickeria","Unna","Yu An","Futterhappen","Tosbiks","100 / Konrad"
 ];
 
-// ===== DATEN =====
 let data = JSON.parse(localStorage.getItem("data") || "[]");
 let kunden = JSON.parse(localStorage.getItem("kunden")) || [...standardKunden];
 let currentPhoto = null;
@@ -199,8 +198,7 @@ const list=document.getElementById("kundenList");
 
 function renderList(filter=""){
 list.innerHTML="";
-kunden
-.filter(k=>k.toLowerCase().includes(filter.toLowerCase()))
+kunden.filter(k=>k.toLowerCase().includes(filter.toLowerCase()))
 .forEach(k=>{
 const div=document.createElement("div");
 div.textContent=k;
@@ -218,7 +216,6 @@ document.addEventListener("click",(e)=>{
 if(!e.target.closest(".dropdown")) list.style.display="none";
 });
 
-// ===== KUNDE SPEICHERN =====
 function addKunde(k){
 if(k && !kunden.includes(k)){
 kunden.push(k);
@@ -296,7 +293,7 @@ currentPhoto=null;
 document.getElementById("previewBox").style.display="none";
 setHeute();
 
-// 👉 NEU: Fokus zurück zu Kunde
+// 👉 Fokus zurück zu Kunde
 kundeInput.focus();
 }
 
