@@ -1,670 +1,355 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Warenausgang Polfood GmbH</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warenausgang Polfood GmbH</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 15px;
-      margin: 0;
-    }
+<style>
+body { font-family: Arial; background:#f4f4f4; padding:15px; margin:0; }
+.box { background:white; padding:15px; max-width:900px; margin:auto; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
+h2 { text-align:center; margin-top:0; }
+label { font-weight:bold; display:block; margin-top:10px; }
 
-    .box {
-      background: white;
-      padding: 15px;
-      max-width: 900px;
-      margin: auto;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
+input {
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  font-size:16px;
+  box-sizing:border-box;
+}
 
-    h2 {
-      text-align: center;
-      margin-top: 0;
-    }
+button {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  background:black;
+  color:white;
+  border:none;
+  border-radius:6px;
+}
 
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
-    }
+table {
+  width:100%;
+  margin-top:20px;
+  border-collapse:collapse;
+  font-size:12px;
+}
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 6px 0;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
+th, td {
+  border:1px solid #ddd;
+  padding:6px;
+  text-align:center;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      background: black;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-    }
+th { background:#eee; }
 
-    button:hover {
-      opacity: 0.9;
-    }
+.dropdown { position:relative; }
 
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-      font-size: 12px;
-      background: white;
-    }
+.dropdown-list {
+  position:absolute;
+  width:100%;
+  border:1px solid #ccc;
+  max-height:220px;
+  overflow:auto;
+  background:white;
+  display:none;
+  z-index:1000;
+}
 
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px;
-      text-align: center;
-      vertical-align: middle;
-    }
+.dropdown-item {
+  padding:12px;
+  cursor:pointer;
+  white-space:pre-line;
+}
 
-    th {
-      background: #eee;
-    }
+.dropdown-item:hover { background:#eee; }
 
-    .dropdown {
-      position: relative;
-      width: 100%;
-    }
+.action-btn {
+  background:#c62828;
+  color:white;
+  border:none;
+  padding:6px 10px;
+  border-radius:4px;
+}
 
-    .dropdown input {
-      width: 100%;
-    }
+.photo-preview img {
+  max-width:100%;
+  max-height:160px;
+  border-radius:8px;
+}
 
-    .dropdown-list {
-      position: absolute;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-top: none;
-      max-height: 220px;
-      overflow-y: auto;
-      background: white;
-      display: none;
-      z-index: 1000;
-      box-sizing: border-box;
-      -webkit-overflow-scrolling: touch;
-    }
+.summary-box {
+  margin-top:20px;
+  background:#fafafa;
+  border:1px solid #ddd;
+  border-radius:8px;
+  padding:10px;
+}
 
-    .dropdown-item {
-      padding: 14px;
-      font-size: 16px;
-      cursor: pointer;
-      text-align: left;
-      white-space: pre-line;
-    }
-
-    .dropdown-item:hover {
-      background: #f0f0f0;
-    }
-
-    .action-btn {
-      background: #c62828;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      width: auto;
-      margin: 2px 0;
-      font-size: 12px;
-    }
-
-    .summary-box {
-      margin-top: 20px;
-      background: #fafafa;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 12px;
-    }
-
-    .summary-title {
-      font-weight: bold;
-      margin-bottom: 10px;
-      font-size: 16px;
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .summary-item {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-    }
-
-    .summary-item strong {
-      display: block;
-      font-size: 18px;
-      margin-top: 4px;
-    }
-
-    .photo-preview {
-      margin-top: 8px;
-      text-align: center;
-    }
-
-    .photo-preview img {
-      max-width: 100%;
-      max-height: 180px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-    }
-
-    .photo-info {
-      font-size: 12px;
-      color: #555;
-      margin-top: 4px;
-      white-space: pre-line;
-    }
-
-    @media (max-width: 600px) {
-      .summary-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      table {
-        font-size: 11px;
-      }
-
-      th, td {
-        padding: 4px;
-      }
-    }
-  </style>
+.summary-grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+</style>
 </head>
+
 <body>
 
 <div class="box">
-  <h2>🚛 Warenausgang Polfood GmbH</h2>
+<h2>🚛 Warenausgang Polfood GmbH</h2>
 
-  <label for="datum">Datum</label>
-  <input type="date" id="datum">
+<label>Datum</label>
+<input type="date" id="datum">
 
-  <label for="kunde">Kunde</label>
-  <div class="dropdown">
-    <input type="text" id="kunde" placeholder="Kunde wählen oder eingeben" autocomplete="off">
-    <div id="kundenList" class="dropdown-list"></div>
-  </div>
+<label>Kunde</label>
+<div class="dropdown">
+  <input id="kunde" placeholder="Kunde wählen oder eingeben">
+  <div id="kundenList" class="dropdown-list"></div>
+</div>
 
-  <label for="e2_out">E2 OUT</label>
-  <input type="text" id="e2_out" inputmode="numeric" pattern="[0-9]*">
+<label>E2 OUT</label>
+<input type="number" id="e2_out">
 
-  <label for="h1_out">H1 OUT</label>
-  <input type="text" id="h1_out" inputmode="numeric" pattern="[0-9]*">
+<label>H1 OUT</label>
+<input type="number" id="h1_out">
 
-  <label for="einweg_out">Einweg OUT</label>
-  <input type="text" id="einweg_out" inputmode="numeric" pattern="[0-9]*">
+<label>Einweg OUT</label>
+<input type="number" id="einweg_out">
 
-  <label for="epal_out">EPAL OUT</label>
-  <input type="text" id="epal_out" inputmode="numeric" pattern="[0-9]*">
+<label>EPAL OUT</label>
+<input type="number" id="epal_out">
 
-  <label for="foto">Foto zur Palette</label>
-  <input type="file" id="foto" accept="image/*" capture="environment">
+<label>Foto</label>
+<input type="file" id="foto" accept="image/*" capture="environment">
 
-  <div class="photo-preview" id="photoPreviewBox" style="display:none;">
-    <img id="photoPreview" src="" alt="Vorschau">
-    <div class="photo-info" id="photoInfo">Foto wird als separate Datei gespeichert</div>
-  </div>
+<div class="photo-preview" id="previewBox" style="display:none;">
+<img id="preview">
+</div>
 
-  <button type="button" onclick="addEntry()">➕ Eintrag speichern</button>
-  <button type="button" onclick="exportExcel()">📦 Excel Tagesbericht exportieren</button>
-  <button type="button" onclick="clearData()">🗑️ Alle Daten löschen</button>
-  <button type="button" onclick="resetKunden()">♻️ Kundenliste zurücksetzen</button>
+<button onclick="addEntry()">➕ Speichern</button>
+<button onclick="exportExcel()">📦 Excel</button>
+<button onclick="clearData()">🗑️ Löschen</button>
 
-  <div class="summary-box">
-    <div class="summary-title">Automatische Summen für das gewählte Datum</div>
-    <div class="summary-grid">
-      <div class="summary-item">E2 OUT<strong id="sum_e2_out">0</strong></div>
-      <div class="summary-item">H1 OUT<strong id="sum_h1_out">0</strong></div>
-      <div class="summary-item">Einweg OUT<strong id="sum_einweg_out">0</strong></div>
-      <div class="summary-item">EPAL OUT<strong id="sum_epal_out">0</strong></div>
-    </div>
-  </div>
+<div class="summary-box">
+<div class="summary-grid">
+<div>E2: <strong id="sum_e2_out">0</strong></div>
+<div>H1: <strong id="sum_h1_out">0</strong></div>
+<div>Einweg: <strong id="sum_einweg_out">0</strong></div>
+<div>EPAL: <strong id="sum_epal_out">0</strong></div>
+</div>
+</div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Datum</th>
-        <th>Kunde</th>
-        <th>E2 OUT</th>
-        <th>H1 OUT</th>
-        <th>Einweg OUT</th>
-        <th>EPAL OUT</th>
-        <th>Foto-Datei</th>
-        <th>Aktion</th>
-      </tr>
-    </thead>
-    <tbody id="table"></tbody>
-  </table>
+<table>
+<thead>
+<tr>
+<th>Datum</th>
+<th>Kunde</th>
+<th>E2</th>
+<th>H1</th>
+<th>Einweg</th>
+<th>EPAL</th>
+<th>Foto</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
 </div>
 
 <script>
-  const standardKunden = [
-    "1 / Wach",
-    "2 / Fed",
-    "3 / Willi Hof",
-    "4 / Bremen\nEB:",
-    "5 / Bremerhaven",
-    "6 / Bad Oldesloe\nEB:",
-    "8 / Havelland\nNr. 618338",
-    "9 / Schmidt und Sohn",
-    "10 / GT ",
-    "11 / Dres",
-    "12 / Atl",
-    "13 / Freiburg ",
-    "14 / Freiburg ",
-    "18 / Föl",
-    "29 / Rostock",
-    "30 / Peter",
-    "32 / BAR",
-    "33 / Frisch .",
-    "45 / Wolf Anaberg ",
-    "48 / Tor",
-    "51 / Käfer",
-    "52 / Hamb.",
-    "53 / Ham. Riem\nNr. 23315",
-    "54 / Ham Berlin\nNr. 23059, 23517",
-    "55 / Ham  Frankfurt\nNr.",
-    "56 / Fisch",
-    "57 / Wolf + Kunt.",
-    "58 / FMS",
-    "59 / DUSP",
-    "66 / Mehl",
-    "70 / FEK H/G",
-    "74 / Landpute",
-    "76 / Wunder",
-    "77 / Elst",
-    "80 / Mär",
-    "81 / Mig\nNr. 202620",
-    "82 / Wal",
-    "83 / Dim",
-    "84 / Landau",
-    "85 / Sandmann",
-    "87 / Richt.",
-    "88 / See.",
-    "89 / Zimmer",
-    "90 / MEGEM",
-    "91 / Bingen",
-    "92 / Weisen",
-    "93 / Enders\nNr.",
-    "94 / Rot\nNr.",
-    "95 / TLC",
-    "96 / NK",
-    "97 / Atl",
-    "98 / BLF",
-    "99 / Chickeria",
-    "Unna",
-    "Yu An",
-    "Futterhappen",
-    "Tosbiks",
-    "100 / Konrad "
-  ];
 
-  let data = JSON.parse(localStorage.getItem("warenausgang_data") || "[]");
-  let kunden = JSON.parse(localStorage.getItem("kunden_liste") || "null") || [...standardKunden];
-  let currentPhotoFile = null;
+// ===== STANDARD KUNDEN =====
+const standardKunden = [
+"1 / Wach","2 / Fed","3 / Willi Hof","4 / Bremen EB","5 / Bremerhaven",
+"6 / Bad Oldesloe EB","8 / Havelland 618338","9 / Schmidt und Sohn",
+"10 / GT","11 / Dres","12 / Atl","13 / Freiburg","14 / Freiburg 2",
+"18 / Föl","29 / Rostock","30 / Peter","32 / BAR","33 / Frisch",
+"45 / Wolf Annaberg","48 / Tor","51 / Käfer","52 / Hamb",
+"53 / Ham Riem","54 / Ham Berlin","55 / Ham Frankfurt","56 / Fisch",
+"57 / Wolf + Kunt","58 / FMS","59 / DUSP","66 / Mehl","70 / FEK",
+"74 / Landpute","76 / Wunder","77 / Elst","80 / Mär","81 / Mig",
+"82 / Wal","83 / Dim","84 / Landau","85 / Sandmann","87 / Richt",
+"88 / See","89 / Zimmer","90 / MEGEM","91 / Bingen","92 / Weisen",
+"93 / Enders","94 / Rot","95 / TLC","96 / NK","97 / Atl 2",
+"98 / BLF","99 / Chickeria","Unna","Yu An","Futterhappen","Tosbiks","100 / Konrad"
+];
 
-  const kundeInput = document.getElementById("kunde");
-  const kundenList = document.getElementById("kundenList");
-  const datumInput = document.getElementById("datum");
-  const fotoInput = document.getElementById("foto");
-  const photoPreview = document.getElementById("photoPreview");
-  const photoPreviewBox = document.getElementById("photoPreviewBox");
-  const photoInfo = document.getElementById("photoInfo");
+// ===== DATEN =====
+let data = JSON.parse(localStorage.getItem("data") || "[]");
+let kunden = JSON.parse(localStorage.getItem("kunden")) || [...standardKunden];
+let currentPhoto = null;
 
-  if (!datumInput.value) {
-    datumInput.value = new Date().toISOString().split("T")[0];
-  }
+// ===== DATUM =====
+function setHeute(){
+const d=new Date();
+const yyyy=d.getFullYear();
+const mm=String(d.getMonth()+1).padStart(2,"0");
+const dd=String(d.getDate()).padStart(2,"0");
+document.getElementById("datum").value=`${yyyy}-${mm}-${dd}`;
+}
+setHeute();
 
-  function save() {
-    localStorage.setItem("warenausgang_data", JSON.stringify(data));
-  }
+// ===== DROPDOWN =====
+const kundeInput=document.getElementById("kunde");
+const list=document.getElementById("kundenList");
 
-  function saveKunden() {
-    localStorage.setItem("kunden_liste", JSON.stringify(kunden));
-  }
+function renderList(filter=""){
+list.innerHTML="";
+kunden
+.filter(k=>k.toLowerCase().includes(filter.toLowerCase()))
+.forEach(k=>{
+const div=document.createElement("div");
+div.textContent=k;
+div.className="dropdown-item";
+div.onclick=()=>{kundeInput.value=k; list.style.display="none";}
+list.appendChild(div);
+});
+list.style.display="block";
+}
 
-  function sortiereKunden() {
-    kunden.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-  }
+kundeInput.addEventListener("input",()=>renderList(kundeInput.value));
+kundeInput.addEventListener("focus",()=>renderList(kundeInput.value));
 
-  function renderKunden(filter = "") {
-    kundenList.innerHTML = "";
+document.addEventListener("click",(e)=>{
+if(!e.target.closest(".dropdown")) list.style.display="none";
+});
 
-    const gefiltert = kunden.filter(k =>
-      k.toLowerCase().includes(filter.toLowerCase())
-    );
+// ===== KUNDE SPEICHERN =====
+function addKunde(k){
+if(k && !kunden.includes(k)){
+kunden.push(k);
+localStorage.setItem("kunden",JSON.stringify(kunden));
+}
+}
 
-    gefiltert.forEach(k => {
-      const div = document.createElement("div");
-      div.className = "dropdown-item";
-      div.textContent = k;
-      div.onclick = () => {
-        kundeInput.value = k;
-        kundenList.style.display = "none";
-      };
-      kundenList.appendChild(div);
-    });
+// ===== FOTO =====
+document.getElementById("foto").addEventListener("change",(e)=>{
+const file=e.target.files[0];
+if(!file)return;
+currentPhoto=file;
 
-    kundenList.style.display = gefiltert.length ? "block" : "none";
-  }
+const reader=new FileReader();
+reader.onload=(ev)=>{
+document.getElementById("preview").src=ev.target.result;
+document.getElementById("previewBox").style.display="block";
+};
+reader.readAsDataURL(file);
+});
 
-  function addKunde(value) {
-    const val = value.trim();
-    if (!val) return;
+// ===== ENTER NAVIGATION =====
+const felder=["datum","kunde","e2_out","h1_out","einweg_out","epal_out"];
 
-    const exists = kunden.some(k => k.toLowerCase() === val.toLowerCase());
+felder.forEach((id,i)=>{
+const f=document.getElementById(id);
+f.addEventListener("keydown",(e)=>{
+if(e.key==="Enter"){
+e.preventDefault();
 
-    if (!exists) {
-      kunden.push(val);
-      sortiereKunden();
-      saveKunden();
-    }
-  }
+if(id==="kunde") addKunde(kundeInput.value);
 
-  function resetKunden() {
-    if (confirm("Kundenliste auf Standard zurücksetzen?")) {
-      kunden = [...standardKunden];
-      sortiereKunden();
-      saveKunden();
-      renderKunden(kundeInput.value);
-      alert("Kundenliste wurde zurückgesetzt.");
-    }
-  }
+if(felder[i+1]){
+document.getElementById(felder[i+1]).focus();
+}else{
+document.getElementById("foto").focus();
+}
+}
+});
+});
 
-  function sanitizeFileName(name) {
-    return name
-      .replace(/[\\/:*?"<>|]/g, "_")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+// ===== SPEICHERN =====
+function addEntry(){
+const datum=document.getElementById("datum").value;
+const kunde=kundeInput.value;
 
-  function getFileExtension(file) {
-    if (!file) return "jpg";
+if(!kunde){alert("Kunde fehlt");return;}
 
-    const nameParts = file.name.split(".");
-    if (nameParts.length > 1) {
-      return nameParts.pop().toLowerCase();
-    }
+let fotoName="";
+if(currentPhoto){
+fotoName=Date.now()+".jpg";
+const url=URL.createObjectURL(currentPhoto);
+const a=document.createElement("a");
+a.href=url;
+a.download=fotoName;
+a.click();
+}
 
-    if (file.type === "image/png") return "png";
-    if (file.type === "image/webp") return "webp";
-    if (file.type === "image/heic") return "heic";
-    return "jpg";
-  }
+data.push({
+datum,
+kunde,
+e2_out:+document.getElementById("e2_out").value||0,
+h1_out:+document.getElementById("h1_out").value||0,
+einweg_out:+document.getElementById("einweg_out").value||0,
+epal_out:+document.getElementById("epal_out").value||0,
+foto:fotoName
+});
 
-  function buildPhotoFileName(datum, kunde, file) {
-    const cleanDate = sanitizeFileName(datum);
-    const cleanKunde = sanitizeFileName(kunde.replace(/\n/g, " "));
-    const ext = getFileExtension(file);
-    return `${cleanDate} - ${cleanKunde}.${ext}`;
-  }
+localStorage.setItem("data",JSON.stringify(data));
+render(); sum();
 
-  function downloadPhotoFile(file, fileName) {
-    if (!file) return;
+// reset
+document.querySelectorAll("input").forEach(i=>i.value="");
+currentPhoto=null;
+document.getElementById("previewBox").style.display="none";
+setHeute();
+}
 
-    const blobUrl = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+// ===== RENDER =====
+function render(){
+const t=document.getElementById("table");
+t.innerHTML="";
+data.forEach((r,i)=>{
+t.innerHTML+=`
+<tr>
+<td>${r.datum}</td>
+<td>${r.kunde}</td>
+<td>${r.e2_out}</td>
+<td>${r.h1_out}</td>
+<td>${r.einweg_out}</td>
+<td>${r.epal_out}</td>
+<td>${r.foto||""}</td>
+<td><button class="action-btn" onclick="del(${i})">X</button></td>
+</tr>`;
+});
+}
 
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-    }, 1000);
-  }
+// ===== DELETE =====
+function del(i){
+data.splice(i,1);
+localStorage.setItem("data",JSON.stringify(data));
+render(); sum();
+}
 
-  kundeInput.addEventListener("input", () => {
-    renderKunden(kundeInput.value);
-  });
+// ===== SUMMEN =====
+function sum(){
+document.getElementById("sum_e2_out").textContent=data.reduce((a,b)=>a+b.e2_out,0);
+document.getElementById("sum_h1_out").textContent=data.reduce((a,b)=>a+b.h1_out,0);
+document.getElementById("sum_einweg_out").textContent=data.reduce((a,b)=>a+b.einweg_out,0);
+document.getElementById("sum_epal_out").textContent=data.reduce((a,b)=>a+b.epal_out,0);
+}
 
-  kundeInput.addEventListener("focus", () => {
-    renderKunden(kundeInput.value);
-  });
+// ===== EXCEL =====
+function exportExcel(){
+if(!data.length)return alert("Keine Daten");
+const ws=XLSX.utils.json_to_sheet(data);
+const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Report");
+XLSX.writeFile(wb,"Warenausgang.xlsx");
+}
 
-  kundeInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addKunde(kundeInput.value);
-      renderKunden(kundeInput.value);
-    }
-  });
+// ===== CLEAR =====
+function clearData(){
+if(confirm("Alles löschen?")){
+data=[];
+localStorage.setItem("data","[]");
+render(); sum();
+}
+}
 
-  datumInput.addEventListener("change", () => {
-    render();
-    renderSummen();
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".dropdown")) {
-      kundenList.style.display = "none";
-    }
-  });
-
-  fotoInput.addEventListener("change", handlePhotoSelect);
-
-  function handlePhotoSelect(event) {
-    const file = event.target.files[0];
-    if (!file) {
-      currentPhotoFile = null;
-      photoPreviewBox.style.display = "none";
-      photoPreview.src = "";
-      photoInfo.textContent = "Foto wird als separate Datei gespeichert";
-      return;
-    }
-
-    currentPhotoFile = file;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      photoPreview.src = e.target.result;
-      photoPreviewBox.style.display = "block";
-
-      const datum = document.getElementById("datum").value || "Datum";
-      const kunde = document.getElementById("kunde").value.trim() || "Kunde";
-      const previewName = buildPhotoFileName(datum, kunde, file);
-      photoInfo.textContent = `Dateiname beim Speichern:\n${previewName}`;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function addEntry() {
-    const datum = document.getElementById("datum").value;
-    const kunde = document.getElementById("kunde").value.trim();
-
-    if (!datum) {
-      alert("Bitte Datum eingeben.");
-      return;
-    }
-
-    if (!kunde) {
-      alert("Bitte Kunde eingeben.");
-      return;
-    }
-
-    addKunde(kunde);
-
-    let fotoDateiName = "";
-
-    if (currentPhotoFile) {
-      fotoDateiName = buildPhotoFileName(datum, kunde, currentPhotoFile);
-      downloadPhotoFile(currentPhotoFile, fotoDateiName);
-    }
-
-    data.push({
-      datum: datum,
-      kunde: kunde,
-      e2_out: Number(document.getElementById("e2_out").value || 0),
-      h1_out: Number(document.getElementById("h1_out").value || 0),
-      einweg_out: Number(document.getElementById("einweg_out").value || 0),
-      epal_out: Number(document.getElementById("epal_out").value || 0),
-      fotoDateiName: fotoDateiName
-    });
-
-    save();
-    render();
-    renderSummen();
-
-    document.getElementById("e2_out").value = "";
-    document.getElementById("h1_out").value = "";
-    document.getElementById("einweg_out").value = "";
-    document.getElementById("epal_out").value = "";
-    document.getElementById("foto").value = "";
-
-    currentPhotoFile = null;
-    photoPreview.src = "";
-    photoPreviewBox.style.display = "none";
-    photoInfo.textContent = "Foto wird als separate Datei gespeichert";
-
-    document.getElementById("e2_out").focus();
-  }
-
-  function deleteEntry(index) {
-    if (confirm("Diesen Eintrag löschen?")) {
-      data.splice(index, 1);
-      save();
-      render();
-      renderSummen();
-    }
-  }
-
-  function render() {
-    const tbody = document.getElementById("table");
-    tbody.innerHTML = "";
-
-    const selectedDate = datumInput.value;
-    const filteredData = selectedDate
-      ? data.filter(r => r.datum === selectedDate)
-      : data;
-
-    filteredData.forEach((r) => {
-      const originalIndex = data.indexOf(r);
-
-      tbody.innerHTML += `
-        <tr>
-          <td>${r.datum}</td>
-          <td style="white-space: pre-line;">${r.kunde}</td>
-          <td>${r.e2_out}</td>
-          <td>${r.h1_out}</td>
-          <td>${r.einweg_out}</td>
-          <td>${r.epal_out}</td>
-          <td>${r.fotoDateiName || "Kein Foto"}</td>
-          <td><button type="button" class="action-btn" onclick="deleteEntry(${originalIndex})">Löschen</button></td>
-        </tr>
-      `;
-    });
-  }
-
-  function renderSummen() {
-    const selectedDate = datumInput.value;
-    const filteredData = selectedDate
-      ? data.filter(r => r.datum === selectedDate)
-      : data;
-
-    const sumE2 = filteredData.reduce((sum, r) => sum + Number(r.e2_out || 0), 0);
-    const sumH1 = filteredData.reduce((sum, r) => sum + Number(r.h1_out || 0), 0);
-    const sumEinweg = filteredData.reduce((sum, r) => sum + Number(r.einweg_out || 0), 0);
-    const sumEpal = filteredData.reduce((sum, r) => sum + Number(r.epal_out || 0), 0);
-
-    document.getElementById("sum_e2_out").textContent = sumE2;
-    document.getElementById("sum_h1_out").textContent = sumH1;
-    document.getElementById("sum_einweg_out").textContent = sumEinweg;
-    document.getElementById("sum_epal_out").textContent = sumEpal;
-  }
-
-  function exportExcel() {
-    if (data.length === 0) {
-      alert("Keine Daten!");
-      return;
-    }
-
-    const selectedDate = datumInput.value;
-    const filteredData = selectedDate
-      ? data.filter(r => r.datum === selectedDate)
-      : data;
-
-    if (filteredData.length === 0) {
-      alert("Keine Daten für dieses Datum!");
-      return;
-    }
-
-    const exportData = filteredData.map(r => ({
-      Datum: r.datum,
-      Kunde: r.kunde.replace(/\n/g, " "),
-      "E2 OUT": r.e2_out,
-      "H1 OUT": r.h1_out,
-      "Einweg OUT": r.einweg_out,
-      "EPAL OUT": r.epal_out,
-      "Foto-Datei": r.fotoDateiName || ""
-    }));
-
-    const summen = filteredData.reduce((acc, r) => {
-      acc["E2 OUT"] += Number(r.e2_out || 0);
-      acc["H1 OUT"] += Number(r.h1_out || 0);
-      acc["Einweg OUT"] += Number(r.einweg_out || 0);
-      acc["EPAL OUT"] += Number(r.epal_out || 0);
-      return acc;
-    }, {
-      "E2 OUT": 0,
-      "H1 OUT": 0,
-      "Einweg OUT": 0,
-      "EPAL OUT": 0
-    });
-
-    exportData.push({
-      Datum: "",
-      Kunde: "SUMME",
-      "E2 OUT": summen["E2 OUT"],
-      "H1 OUT": summen["H1 OUT"],
-      "Einweg OUT": summen["Einweg OUT"],
-      "EPAL OUT": summen["EPAL OUT"],
-      "Foto-Datei": ""
-    });
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Tagesbericht");
-
-    const today = selectedDate || "report";
-    XLSX.writeFile(wb, `Warenausgang_${today}.xlsx`);
-  }
-
-  function clearData() {
-    if (confirm("Wirklich alle Daten löschen?")) {
-      data = [];
-      save();
-      render();
-      renderSummen();
-    }
-  }
-
-  sortiereKunden();
-  saveKunden();
-  render();
-  renderSummen();
+render(); sum();
 </script>
 
 </body>
