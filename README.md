@@ -152,7 +152,7 @@ th { background:#eee; }
 <th>Einweg</th>
 <th>EPAL</th>
 <th>Foto</th>
-<th></th>
+<th>Aktion</th>
 </tr>
 </thead>
 <tbody id="table"></tbody>
@@ -160,8 +160,6 @@ th { background:#eee; }
 </div>
 
 <script>
-
-// ===== KUNDEN =====
 const standardKunden = [
 "1 / Wach","2 / Fed","3 / Willi Hof","4 / Bremen EB","5 / Bremerhaven",
 "6 / Bad Oldesloe EB","8 / Havelland","9 / Schmidt","10 / GT",
@@ -178,131 +176,196 @@ const standardKunden = [
 "99 / Chickeria","Unna","Yu An","Futterhappen","Tosbiks","100 / Konrad"
 ];
 
-let data = JSON.parse(localStorage.getItem("data") || "[]");
-let kunden = JSON.parse(localStorage.getItem("kunden")) || [...standardKunden];
+let data = JSON.parse(localStorage.getItem("warenausgang_data") || "[]");
+let kunden = JSON.parse(localStorage.getItem("kunden_liste") || "null") || [...standardKunden];
 let currentPhoto = null;
 
-// ===== DATUM =====
+const kundeInput = document.getElementById("kunde");
+const list = document.getElementById("kundenList");
+const datumInput = document.getElementById("datum");
+
 function setHeute(){
-const d=new Date();
-const yyyy=d.getFullYear();
-const mm=String(d.getMonth()+1).padStart(2,"0");
-const dd=String(d.getDate()).padStart(2,"0");
-document.getElementById("datum").value=`${yyyy}-${mm}-${dd}`;
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  datumInput.value = `${yyyy}-${mm}-${dd}`;
 }
 setHeute();
 
-// ===== DROPDOWN =====
-const kundeInput=document.getElementById("kunde");
-const list=document.getElementById("kundenList");
+function save(){
+  localStorage.setItem("warenausgang_data", JSON.stringify(data));
+}
+
+function saveKunden(){
+  localStorage.setItem("kunden_liste", JSON.stringify(kunden));
+}
 
 function renderList(filter=""){
-list.innerHTML="";
-kunden.filter(k=>k.toLowerCase().includes(filter.toLowerCase()))
-.forEach(k=>{
-const div=document.createElement("div");
-div.textContent=k;
-div.className="dropdown-item";
-div.onclick=()=>{kundeInput.value=k; list.style.display="none";}
-list.appendChild(div);
-});
-list.style.display="block";
+  list.innerHTML="";
+  kunden
+    .filter(k=>k.toLowerCase().includes(filter.toLowerCase()))
+    .forEach(k=>{
+      const div=document.createElement("div");
+      div.textContent=k;
+      div.className="dropdown-item";
+      div.onclick=()=>{
+        kundeInput.value=k;
+        list.style.display="none";
+      };
+      list.appendChild(div);
+    });
+  list.style.display="block";
+}
+
+function addKunde(k){
+  const val = k.trim();
+  if(val && !kunden.some(x=>x.toLowerCase()===val.toLowerCase())){
+    kunden.push(val);
+    saveKunden();
+  }
 }
 
 kundeInput.addEventListener("input",()=>renderList(kundeInput.value));
 kundeInput.addEventListener("focus",()=>renderList(kundeInput.value));
 
 document.addEventListener("click",(e)=>{
-if(!e.target.closest(".dropdown")) list.style.display="none";
+  if(!e.target.closest(".dropdown")) list.style.display="none";
 });
 
-function addKunde(k){
-if(k && !kunden.includes(k)){
-kunden.push(k);
-localStorage.setItem("kunden",JSON.stringify(kunden));
-}
-}
-
-// ===== FOTO =====
 document.getElementById("foto").addEventListener("change",(e)=>{
-const file=e.target.files[0];
-if(!file)return;
-currentPhoto=file;
+  const file=e.target.files[0];
+  if(!file) return;
 
-const reader=new FileReader();
-reader.onload=(ev)=>{
-document.getElementById("preview").src=ev.target.result;
-document.getElementById("previewBox").style.display="block";
-};
-reader.readAsDataURL(file);
+  currentPhoto=file;
+
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    document.getElementById("preview").src=ev.target.result;
+    document.getElementById("previewBox").style.display="block";
+  };
+  reader.readAsDataURL(file);
 });
 
-// ===== ENTER NAVIGATION =====
 const felder=["datum","kunde","e2_out","h1_out","einweg_out","epal_out"];
 
 felder.forEach((id,i)=>{
-const f=document.getElementById(id);
-f.addEventListener("keydown",(e)=>{
-if(e.key==="Enter"){
-e.preventDefault();
+  document.getElementById(id).addEventListener("keydown",(e)=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
 
-if(id==="kunde") addKunde(kundeInput.value);
+      if(id==="kunde"){
+        addKunde(kundeInput.value);
+      }
 
-if(felder[i+1]){
-document.getElementById(felder[i+1]).focus();
-}else{
-document.getElementById("foto").focus();
-}
-}
+      if(felder[i+1]){
+        document.getElementById(felder[i+1]).focus();
+      } else {
+        document.getElementById("foto").focus();
+      }
+    }
+  });
 });
-});
 
-// ===== SPEICHERN =====
+function sanitizeFileName(name){
+  return name
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getFileExtension(file){
+  if(!file) return "jpg";
+
+  const parts = file.name.split(".");
+  if(parts.length > 1){
+    return parts.pop().toLowerCase();
+  }
+
+  if(file.type === "image/png") return "png";
+  if(file.type === "image/webp") return "webp";
+  if(file.type === "image/heic") return "heic";
+  return "jpg";
+}
+
+function buildPhotoName(datum,kunde,file){
+  const cleanDate = sanitizeFileName(datum);
+  const cleanKunde = sanitizeFileName(kunde.replace(/\n/g," "));
+  const ext = getFileExtension(file);
+  return `${cleanDate} - ${cleanKunde}.${ext}`;
+}
+
+function downloadPhoto(file,name){
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+  },1000);
+}
+
 function addEntry(){
-const datum=document.getElementById("datum").value;
-const kunde=kundeInput.value;
+  const datum = datumInput.value;
+  const kunde = kundeInput.value.trim();
 
-if(!kunde){alert("Kunde fehlt");return;}
+  if(!datum){
+    alert("Datum fehlt.");
+    return;
+  }
 
-let fotoName="";
-if(currentPhoto){
-fotoName=Date.now()+".jpg";
-const url=URL.createObjectURL(currentPhoto);
-const a=document.createElement("a");
-a.href=url;
-a.download=fotoName;
-a.click();
+  if(!kunde){
+    alert("Kunde fehlt.");
+    return;
+  }
+
+  addKunde(kunde);
+
+  let fotoName = "";
+
+  if(currentPhoto){
+    fotoName = buildPhotoName(datum,kunde,currentPhoto);
+    downloadPhoto(currentPhoto,fotoName);
+  }
+
+  data.push({
+    datum,
+    kunde,
+    e2_out:+document.getElementById("e2_out").value||0,
+    h1_out:+document.getElementById("h1_out").value||0,
+    einweg_out:+document.getElementById("einweg_out").value||0,
+    epal_out:+document.getElementById("epal_out").value||0,
+    foto:fotoName
+  });
+
+  save();
+  render();
+  sum();
+
+  document.getElementById("e2_out").value="";
+  document.getElementById("h1_out").value="";
+  document.getElementById("einweg_out").value="";
+  document.getElementById("epal_out").value="";
+  document.getElementById("foto").value="";
+
+  currentPhoto=null;
+  document.getElementById("previewBox").style.display="none";
+  document.getElementById("preview").src="";
+
+  setHeute();
+  kundeInput.focus();
 }
 
-data.push({
-datum,
-kunde,
-e2_out:+document.getElementById("e2_out").value||0,
-h1_out:+document.getElementById("h1_out").value||0,
-einweg_out:+document.getElementById("einweg_out").value||0,
-epal_out:+document.getElementById("epal_out").value||0,
-foto:fotoName
-});
-
-localStorage.setItem("data",JSON.stringify(data));
-render(); sum();
-
-// reset
-document.querySelectorAll("input").forEach(i=>i.value="");
-currentPhoto=null;
-document.getElementById("previewBox").style.display="none";
-setHeute();
-
-// 👉 Fokus zurück zu Kunde
-kundeInput.focus();
-}
-
-// ===== RENDER =====
 function render(){
-const t=document.getElementById("table");
-t.innerHTML="";
-data.forEach((r,i)=>{
-t.innerHTML+=`
+  const t=document.getElementById("table");
+  t.innerHTML="";
+
+  data.forEach((r,i)=>{
+    t.innerHTML+=`
 <tr>
 <td>${r.datum}</td>
 <td>${r.kunde}</td>
@@ -313,43 +376,50 @@ t.innerHTML+=`
 <td>${r.foto||""}</td>
 <td><button class="action-btn" onclick="del(${i})">X</button></td>
 </tr>`;
-});
+  });
 }
 
-// ===== DELETE =====
 function del(i){
-data.splice(i,1);
-localStorage.setItem("data",JSON.stringify(data));
-render(); sum();
+  if(confirm("Eintrag löschen?")){
+    data.splice(i,1);
+    save();
+    render();
+    sum();
+  }
 }
 
-// ===== SUMMEN =====
 function sum(){
-document.getElementById("sum_e2_out").textContent=data.reduce((a,b)=>a+b.e2_out,0);
-document.getElementById("sum_h1_out").textContent=data.reduce((a,b)=>a+b.h1_out,0);
-document.getElementById("sum_einweg_out").textContent=data.reduce((a,b)=>a+b.einweg_out,0);
-document.getElementById("sum_epal_out").textContent=data.reduce((a,b)=>a+b.epal_out,0);
+  document.getElementById("sum_e2_out").textContent=data.reduce((a,b)=>a+Number(b.e2_out||0),0);
+  document.getElementById("sum_h1_out").textContent=data.reduce((a,b)=>a+Number(b.h1_out||0),0);
+  document.getElementById("sum_einweg_out").textContent=data.reduce((a,b)=>a+Number(b.einweg_out||0),0);
+  document.getElementById("sum_epal_out").textContent=data.reduce((a,b)=>a+Number(b.epal_out||0),0);
 }
 
-// ===== EXCEL =====
 function exportExcel(){
-if(!data.length)return alert("Keine Daten");
-const ws=XLSX.utils.json_to_sheet(data);
-const wb=XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb,ws,"Report");
-XLSX.writeFile(wb,"Warenausgang.xlsx");
+  if(!data.length){
+    alert("Keine Daten.");
+    return;
+  }
+
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Warenausgang");
+
+  const today = datumInput.value || "report";
+  XLSX.writeFile(wb,`Warenausgang_${today}.xlsx`);
 }
 
-// ===== CLEAR =====
 function clearData(){
-if(confirm("Alles löschen?")){
-data=[];
-localStorage.setItem("data","[]");
-render(); sum();
-}
+  if(confirm("Alles löschen?")){
+    data=[];
+    save();
+    render();
+    sum();
+  }
 }
 
-render(); sum();
+render();
+sum();
 </script>
 
 </body>
