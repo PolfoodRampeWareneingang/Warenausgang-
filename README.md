@@ -401,12 +401,76 @@ function exportExcel(){
     return;
   }
 
-  const ws=XLSX.utils.json_to_sheet(data);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Warenausgang");
+  const exportData = data.map(r => ({
+    Datum: r.datum,
+    Kunde: r.kunde,
+    "E2 OUT": r.e2_out,
+    "H1 OUT": r.h1_out,
+    "Einweg OUT": r.einweg_out,
+    "EPAL OUT": r.epal_out,
+    Foto: r.foto || ""
+  }));
+
+  exportData.push({});
+  exportData.push({
+    Datum: "",
+    Kunde: "SUMMEN JE KUNDE",
+    "E2 OUT": "",
+    "H1 OUT": "",
+    "Einweg OUT": "",
+    "EPAL OUT": "",
+    Foto: ""
+  });
+
+  const summenProKunde = {};
+
+  data.forEach(r => {
+    const kunde = r.kunde || "Ohne Kunde";
+
+    if (!summenProKunde[kunde]) {
+      summenProKunde[kunde] = {
+        e2_out: 0,
+        h1_out: 0,
+        einweg_out: 0,
+        epal_out: 0
+      };
+    }
+
+    summenProKunde[kunde].e2_out += Number(r.e2_out || 0);
+    summenProKunde[kunde].h1_out += Number(r.h1_out || 0);
+    summenProKunde[kunde].einweg_out += Number(r.einweg_out || 0);
+    summenProKunde[kunde].epal_out += Number(r.epal_out || 0);
+  });
+
+  Object.keys(summenProKunde).forEach(kunde => {
+    exportData.push({
+      Datum: "",
+      Kunde: kunde,
+      "E2 OUT": summenProKunde[kunde].e2_out,
+      "H1 OUT": summenProKunde[kunde].h1_out,
+      "Einweg OUT": summenProKunde[kunde].einweg_out,
+      "EPAL OUT": summenProKunde[kunde].epal_out,
+      Foto: "Summe"
+    });
+  });
+
+  exportData.push({});
+  exportData.push({
+    Datum: "",
+    Kunde: "GESAMTSUMME",
+    "E2 OUT": data.reduce((a,b)=>a+Number(b.e2_out||0),0),
+    "H1 OUT": data.reduce((a,b)=>a+Number(b.h1_out||0),0),
+    "Einweg OUT": data.reduce((a,b)=>a+Number(b.einweg_out||0),0),
+    "EPAL OUT": data.reduce((a,b)=>a+Number(b.epal_out||0),0),
+    Foto: ""
+  });
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Warenausgang");
 
   const today = datumInput.value || "report";
-  XLSX.writeFile(wb,`Warenausgang_${today}.xlsx`);
+  XLSX.writeFile(wb, `Warenausgang_${today}.xlsx`);
 }
 
 function clearData(){
