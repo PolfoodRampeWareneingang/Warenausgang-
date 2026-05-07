@@ -38,6 +38,7 @@ th { background:#eee; }
   border:none;
   padding:6px 10px;
   border-radius:4px;
+  width:auto;
 }
 
 .photo-preview img {
@@ -108,26 +109,26 @@ th { background:#eee; }
 
 <div class="summary-box">
 <div class="summary-grid">
-<div>E2: <strong id="sum_e2_out">0</strong></div>
-<div>H1: <strong id="sum_h1_out">0</strong></div>
-<div>Einweg: <strong id="sum_einweg_out">0</strong></div>
-<div>EPAL: <strong id="sum_epal_out">0</strong></div>
+<div>E2 gesamt: <strong id="sum_e2_out">0</strong></div>
+<div>H1 gesamt: <strong id="sum_h1_out">0</strong></div>
+<div>Einweg gesamt: <strong id="sum_einweg_out">0</strong></div>
+<div>EPAL gesamt: <strong id="sum_epal_out">0</strong></div>
 </div>
 </div>
 
 <table>
 <thead>
 <tr>
-<th>Datum</th>
 <th>Kunde</th>
 <th>AVIS E2</th>
-<th>E2 OUT</th>
+<th>E2 Zusammensetzung</th>
 <th>E2 Gesamt</th>
+<th>Differenz</th>
 <th>Status</th>
-<th>H1</th>
-<th>Einweg</th>
-<th>EPAL</th>
-<th>Foto</th>
+<th>H1 Gesamt</th>
+<th>Einweg Gesamt</th>
+<th>EPAL Gesamt</th>
+<th>Fotos</th>
 <th>Aktion</th>
 </tr>
 </thead>
@@ -306,6 +307,7 @@ document.getElementById("avisFile").addEventListener("change", function(e){
     });
 
     alert("AVIS-Datei wurde geladen.");
+    render();
   };
 
   reader.readAsArrayBuffer(file);
@@ -427,6 +429,55 @@ function downloadPhoto(file,name){
   },1000);
 }
 
+function getCustomerAvis(kunde){
+  const avisKey = getAvisKeyForAppKunde(kunde);
+  return avisData[avisKey] ?? null;
+}
+
+function getCustomerSummary(kunde, extraE2 = 0){
+  const entries = data.filter(r => r.kunde === kunde);
+  const e2Parts = entries.map(r => Number(r.e2_out || 0));
+
+  if(extraE2 !== null && extraE2 !== undefined){
+    e2Parts.push(Number(extraE2 || 0));
+  }
+
+  const e2Total = e2Parts.reduce((a,b)=>a+b,0);
+  const avisE2 = getCustomerAvis(kunde);
+
+  let status = "OK";
+  let differenz = "";
+  let abweichung = "";
+
+  if(avisE2 === null){
+    status = "KEIN AVIS";
+    differenz = "";
+    abweichung = "Kein AVIS-Eintrag gefunden";
+  } else {
+    differenz = e2Total - avisE2;
+
+    if(e2Total < avisE2){
+      status = "OFFEN";
+      abweichung = `Kunde: ${kunde}\nAVIS E2: ${avisE2}\nGesamt E2 OUT: ${e2Total}\nNoch offen: ${avisE2 - e2Total}`;
+    } else if(e2Total === avisE2){
+      status = "OK";
+      abweichung = `Kunde: ${kunde}\nAVIS E2 vollständig erreicht: ${avisE2}`;
+    } else {
+      status = "ZU VIEL";
+      abweichung = `Kunde: ${kunde}\nAVIS E2: ${avisE2}\nGesamt E2 OUT: ${e2Total}\nZu viel: ${e2Total - avisE2}`;
+    }
+  }
+
+  return {
+    avisE2,
+    e2Parts,
+    e2Total,
+    differenz,
+    status,
+    abweichung
+  };
+}
+
 function addEntry(){
   const datum = datumInput.value;
   const kunde = kundeInput.value.trim();
@@ -443,35 +494,13 @@ function addEntry(){
 
   addKunde(kunde);
 
-  const avisKey = getAvisKeyForAppKunde(kunde);
-  const avisE2 = avisData[avisKey] ?? null;
   const e2Out = Number(document.getElementById("e2_out").value || 0);
+  const previewSummary = getCustomerSummary(kunde, e2Out);
 
-  const bisherE2Out = data
-    .filter(r => r.kunde === kunde)
-    .reduce((sum, r) => sum + Number(r.e2_out || 0), 0);
-
-  const gesamtE2Out = bisherE2Out + e2Out;
-
-  let status = "OK";
-  let abweichung = "";
-
-  if(avisE2 === null){
-    status = "KEIN AVIS";
-    abweichung = "Kein AVIS-Eintrag gefunden";
-  } else if(gesamtE2Out < avisE2){
-    status = "OFFEN";
-    abweichung = `AVIS E2: ${avisE2} / Gesamt E2 OUT: ${gesamtE2Out} / offen: ${avisE2 - gesamtE2Out}`;
-  } else if(gesamtE2Out === avisE2){
-    status = "OK";
-    abweichung = `AVIS E2 vollständig erreicht: ${avisE2}`;
-  } else if(gesamtE2Out > avisE2){
-    status = "ZU VIEL";
-    abweichung = `AVIS E2: ${avisE2} / Gesamt E2 OUT: ${gesamtE2Out} / zu viel: ${gesamtE2Out - avisE2}`;
-
+  if(previewSummary.status === "ZU VIEL"){
     const weiter = confirm(
       "Achtung! Für diesen Kunden wurde mehr E2 OUT erfasst als avisiert:\n\n" +
-      abweichung +
+      previewSummary.abweichung +
       "\n\nTrotzdem speichern?"
     );
 
@@ -490,16 +519,14 @@ function addEntry(){
   data.push({
     datum,
     kunde,
-    avis_e2: avisE2,
-    avis_key: avisKey,
+    avis_e2: previewSummary.avisE2,
     e2_out: e2Out,
-    e2_out_bisher: bisherE2Out,
-    e2_out_gesamt: gesamtE2Out,
     h1_out:+document.getElementById("h1_out").value||0,
     einweg_out:+document.getElementById("einweg_out").value||0,
     epal_out:+document.getElementById("epal_out").value||0,
-    status,
-    abweichung,
+    status: previewSummary.status,
+    differenz: previewSummary.differenz,
+    abweichung: previewSummary.abweichung,
     foto:fotoName
   });
 
@@ -521,79 +548,100 @@ function addEntry(){
   kundeInput.focus();
 }
 
+function getGroupedData(){
+  const groups = {};
+
+  data.forEach((r, index)=>{
+    const kunde = r.kunde || "Ohne Kunde";
+
+    if(!groups[kunde]){
+      groups[kunde] = {
+        kunde,
+        avisE2: getCustomerAvis(kunde),
+        e2Parts: [],
+        e2Total: 0,
+        h1Total: 0,
+        einwegTotal: 0,
+        epalTotal: 0,
+        fotos: [],
+        indexes: []
+      };
+    }
+
+    groups[kunde].e2Parts.push(Number(r.e2_out || 0));
+    groups[kunde].e2Total += Number(r.e2_out || 0);
+    groups[kunde].h1Total += Number(r.h1_out || 0);
+    groups[kunde].einwegTotal += Number(r.einweg_out || 0);
+    groups[kunde].epalTotal += Number(r.epal_out || 0);
+
+    if(r.foto){
+      groups[kunde].fotos.push(r.foto);
+    }
+
+    groups[kunde].indexes.push(index);
+  });
+
+  Object.values(groups).forEach(g=>{
+    if(g.avisE2 === null){
+      g.status = "KEIN AVIS";
+      g.differenz = "";
+    } else {
+      g.differenz = g.e2Total - g.avisE2;
+
+      if(g.e2Total < g.avisE2){
+        g.status = "OFFEN";
+      } else if(g.e2Total === g.avisE2){
+        g.status = "OK";
+      } else {
+        g.status = "ZU VIEL";
+      }
+    }
+
+    g.zusammensetzung = g.e2Parts.length
+      ? `${g.e2Parts.join(" + ")} = ${g.e2Total}`
+      : "";
+  });
+
+  return Object.values(groups);
+}
+
 function render(){
   const t=document.getElementById("table");
   t.innerHTML="";
 
-  data.forEach((r,i)=>{
+  const groups = getGroupedData();
+
+  groups.forEach(g=>{
     let statusClass = "ok";
-    if(r.status === "OFFEN") statusClass = "open";
-    if(r.status === "ZU VIEL" || r.status === "KEIN AVIS") statusClass = "warn";
+    if(g.status === "OFFEN") statusClass = "open";
+    if(g.status === "ZU VIEL" || g.status === "KEIN AVIS") statusClass = "warn";
 
     t.innerHTML+=`
 <tr>
-<td>${r.datum}</td>
-<td>${r.kunde}</td>
-<td>${r.avis_e2 ?? ""}</td>
-<td>${r.e2_out}</td>
-<td>${r.e2_out_gesamt ?? ""}</td>
-<td class="${statusClass}">${r.status || ""}</td>
-<td>${r.h1_out}</td>
-<td>${r.einweg_out}</td>
-<td>${r.epal_out}</td>
-<td>${r.foto||""}</td>
-<td><button class="action-btn" onclick="del(${i})">X</button></td>
+<td>${g.kunde}</td>
+<td>${g.avisE2 ?? ""}</td>
+<td>${g.zusammensetzung}</td>
+<td>${g.e2Total}</td>
+<td>${g.differenz}</td>
+<td class="${statusClass}">${g.status}</td>
+<td>${g.h1Total}</td>
+<td>${g.einwegTotal}</td>
+<td>${g.epalTotal}</td>
+<td>${g.fotos.join("<br>")}</td>
+<td><button class="action-btn" onclick="delCustomer('${encodeURIComponent(g.kunde)}')">X</button></td>
 </tr>`;
   });
 }
 
-function del(i){
-  if(confirm("Eintrag löschen?")){
-    data.splice(i,1);
+function delCustomer(encodedKunde){
+  const kunde = decodeURIComponent(encodedKunde);
+
+  if(confirm(`Alle Einträge für ${kunde} löschen?`)){
+    data = data.filter(r => r.kunde !== kunde);
     save();
-    recalculateCustomerTotals();
     render();
     sum();
   }
-}
-
-function recalculateCustomerTotals(){
-  const totals = {};
-
-  data.forEach(r => {
-    const kunde = r.kunde;
-
-    if(!totals[kunde]){
-      totals[kunde] = 0;
-    }
-
-    const vorher = totals[kunde];
-    const aktuell = Number(r.e2_out || 0);
-    const gesamt = vorher + aktuell;
-
-    totals[kunde] = gesamt;
-
-    r.e2_out_bisher = vorher;
-    r.e2_out_gesamt = gesamt;
-
-    const avisE2 = Number(r.avis_e2 || 0);
-
-    if(r.avis_e2 === null || r.avis_e2 === undefined || r.avis_e2 === ""){
-      r.status = "KEIN AVIS";
-      r.abweichung = "Kein AVIS-Eintrag gefunden";
-    } else if(gesamt < avisE2){
-      r.status = "OFFEN";
-      r.abweichung = `AVIS E2: ${avisE2} / Gesamt E2 OUT: ${gesamt} / offen: ${avisE2 - gesamt}`;
-    } else if(gesamt === avisE2){
-      r.status = "OK";
-      r.abweichung = `AVIS E2 vollständig erreicht: ${avisE2}`;
-    } else {
-      r.status = "ZU VIEL";
-      r.abweichung = `AVIS E2: ${avisE2} / Gesamt E2 OUT: ${gesamt} / zu viel: ${gesamt - avisE2}`;
-    }
-  });
-
-  save();
 }
 
 function sum(){
@@ -612,15 +660,11 @@ function exportExcel(){
   const exportData = data.map(r => ({
     Datum: r.datum,
     Kunde: r.kunde,
-    "AVIS E2": r.avis_e2 ?? "",
+    "AVIS E2": getCustomerAvis(r.kunde) ?? "",
     "E2 OUT Einzel": r.e2_out,
-    "E2 OUT bisher": r.e2_out_bisher ?? "",
-    "E2 OUT gesamt": r.e2_out_gesamt ?? "",
     "H1 OUT": r.h1_out,
     "Einweg OUT": r.einweg_out,
     "EPAL OUT": r.epal_out,
-    Status: r.status || "",
-    Abweichung: r.abweichung || "",
     Foto: r.foto || ""
   }));
 
@@ -630,54 +674,26 @@ function exportExcel(){
     Kunde: "SUMMEN JE KUNDE",
     "AVIS E2": "",
     "E2 OUT Einzel": "",
-    "E2 OUT bisher": "",
-    "E2 OUT gesamt": "",
     "H1 OUT": "",
     "Einweg OUT": "",
     "EPAL OUT": "",
-    Status: "",
-    Abweichung: "",
     Foto: ""
   });
 
-  const summenProKunde = {};
+  const groups = getGroupedData();
 
-  data.forEach(r => {
-    const kunde = r.kunde || "Ohne Kunde";
-
-    if(!summenProKunde[kunde]){
-      summenProKunde[kunde] = {
-        avis_e2: Number(r.avis_e2 || 0),
-        e2_out: 0,
-        h1_out: 0,
-        einweg_out: 0,
-        epal_out: 0
-      };
-    }
-
-    summenProKunde[kunde].e2_out += Number(r.e2_out || 0);
-    summenProKunde[kunde].h1_out += Number(r.h1_out || 0);
-    summenProKunde[kunde].einweg_out += Number(r.einweg_out || 0);
-    summenProKunde[kunde].epal_out += Number(r.epal_out || 0);
-  });
-
-  Object.keys(summenProKunde).forEach(kunde => {
-    const s = summenProKunde[kunde];
-    const diff = s.avis_e2 - s.e2_out;
-
+  groups.forEach(g=>{
     exportData.push({
       Datum: "",
-      Kunde: kunde,
-      "AVIS E2": s.avis_e2,
-      "E2 OUT Einzel": "",
-      "E2 OUT bisher": "",
-      "E2 OUT gesamt": s.e2_out,
-      "H1 OUT": s.h1_out,
-      "Einweg OUT": s.einweg_out,
-      "EPAL OUT": s.epal_out,
-      Status: diff === 0 ? "OK" : diff > 0 ? "OFFEN" : "ZU VIEL",
-      Abweichung: diff,
-      Foto: ""
+      Kunde: g.kunde,
+      "AVIS E2": g.avisE2 ?? "",
+      "E2 OUT Einzel": g.zusammensetzung,
+      "H1 OUT": g.h1Total,
+      "Einweg OUT": g.einwegTotal,
+      "EPAL OUT": g.epalTotal,
+      Status: g.status,
+      Differenz: g.differenz,
+      Foto: g.fotos.join(", ")
     });
   });
 
@@ -685,15 +701,13 @@ function exportExcel(){
   exportData.push({
     Datum: "",
     Kunde: "GESAMTSUMME",
-    "AVIS E2": Object.values(summenProKunde).reduce((a,b)=>a+Number(b.avis_e2||0),0),
-    "E2 OUT Einzel": "",
-    "E2 OUT bisher": "",
-    "E2 OUT gesamt": data.reduce((a,b)=>a+Number(b.e2_out||0),0),
+    "AVIS E2": groups.reduce((a,b)=>a+Number(b.avisE2||0),0),
+    "E2 OUT Einzel": data.reduce((a,b)=>a+Number(b.e2_out||0),0),
     "H1 OUT": data.reduce((a,b)=>a+Number(b.h1_out||0),0),
     "Einweg OUT": data.reduce((a,b)=>a+Number(b.einweg_out||0),0),
     "EPAL OUT": data.reduce((a,b)=>a+Number(b.epal_out||0),0),
     Status: "",
-    Abweichung: "",
+    Differenz: "",
     Foto: ""
   });
 
@@ -714,7 +728,6 @@ function clearData(){
   }
 }
 
-recalculateCustomerTotals();
 render();
 sum();
 </script>
